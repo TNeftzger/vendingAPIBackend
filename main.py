@@ -5,16 +5,21 @@ from flask_restful import Api, Resource, reqparse
 app = Flask(__name__)
 api = Api(app)
 
+# Use while loop to decipher whether coin is $.25
+
 # Var to handle coins
 currency = 0
 
 
 # Soda dict for data
 soda = {
-    1: {"flavor": "Coke", "price": 2, "count": 5},
-    2: {"flavor": "Pepsi", "price": 2, "count": 5},
-    3: {"flavor": "Dr. Pepper", "price": 2, "count": 5}
+    1: {"flavor": "Coke", "price": 2, "quantity": 5},
+    2: {"flavor": "Pepsi", "price": 2, "quantity": 5},
+    3: {"flavor": "Dr. Pepper", "price": 2, "quantity": 5}
 }
+
+# Meet the array requirements for inventory
+quantityArray = []
 
 
 # Defining a money class to handle the / endpoint
@@ -27,7 +32,7 @@ class money(Resource):
     # PUT to update coin
     def put(self):
         global currency
-        coin = int(request.form['coin'])
+        coin = int(request.form["coin"])
         if coin == 1:
             currency = currency + coin
             customResponse = make_response("X-Coins:" + str(currency))
@@ -35,7 +40,7 @@ class money(Resource):
             customResponse.status_code = 204
             return customResponse
         else:
-            return "You must enter only one coin"
+            return "You must enter a coin and only one coin."
 
 
     # DELETE to return coins entered into the vending machine
@@ -52,20 +57,22 @@ class money(Resource):
 # Defining an inventory class to handle the /inventory endpoint
 class inventory(Resource):
     def get(self):
-        return soda
+        # Updated to deliver array of integers for quantity
+        quantityArray = [int(soda[1]['quantity']),int(soda[2]['quantity']),int(soda[3]['quantity'])]
+        # Originally returned soda dictionary
+        return quantityArray
 
 
 # Defining a stock class to handle the /inventory/<id> endpoint
 class stock(Resource):
     def get(self, id):
-        return soda[id]
+        return int(soda[id]['quantity'])# Updated to return an integer as specified in directions
 
 
     # PUT to handle transaction endpoint
     def put(self, id):
         global currency
-        initialInventoryCount = soda[id]['count']
-        purchaseAmount = int(currency / 2)
+        initialInventoryCount = soda[id]['quantity']
         if initialInventoryCount == 0:
             customResponse = make_response("Out of stock. Please choose another item.")
             customResponse.headers["X-Coins: "] = str(currency)
@@ -77,25 +84,16 @@ class stock(Resource):
             customResponse.status_code = 403
             return customResponse
         else:
-            finalInventoryCount = initialInventoryCount - purchaseAmount
-            if finalInventoryCount < 0:
-                moneyReturned = currency - (soda[id]['count']*2)
-                currency = 0
-                soda[id]['count'] = 0
-                customResponse = make_response("X-Coins: " + str(moneyReturned))
-                customResponse.headers["X-Coins: "] = str(moneyReturned)
-                customResponse.headers["X-Inventory-Remaining: "] = str(soda[id]['count'])
-                customResponse.status_code = 200
-                return customResponse
-            else:
-                moneyReturned = currency % 2
-                currency = 0
-                soda[id]['count'] = finalInventoryCount
-                customResponse = make_response("X-Coins: " + str(moneyReturned))
-                customResponse.headers["X-Coins: "] = str(moneyReturned)
-                customResponse.headers["X-Inventory-Remaining: "] = str(soda[id]['count'])
-                customResponse.status_code = 200
-                return customResponse
+            finalInventoryCount = initialInventoryCount - 1
+            moneyReturned = currency - 2
+            currency = 0
+            soda[id]['quantity'] = finalInventoryCount
+            customResponse = make_response("X-Coins: " + str(moneyReturned))
+            customResponse.headers["X-Coins: "] = str(moneyReturned)
+            customResponse.headers["X-Inventory-Remaining: "] = str(soda[id]['quantity'])
+            customResponse.status_code = 200
+            return customResponse
+
 
 
 # Endpoint resources with parameters
